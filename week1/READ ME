@@ -1,0 +1,28 @@
+Final Model Artifact
+
+The final model is saved as models/final_hgb_pipeline.joblib. The accompanying classification threshold is saved as models/final_threshold.joblib.
+
+The pipeline contains the complete feature-engineering, preprocessing, and HistGradientBoosting model workflow.
+
+How to Infer
+import joblib
+
+# Load the saved pipeline and threshold
+model = joblib.load("models/final_hgb_pipeline.joblib")
+threshold = joblib.load("models/final_threshold.joblib")
+
+# Generate probability for the positive class
+probability = model.predict_proba(new_data)[:, 1]
+
+# Apply the selected threshold
+prediction = (probability >= threshold).astype(int)
+
+The final classification threshold is 0.35, selected using the validation set by maximizing F1-score. The threshold was kept fixed when evaluating the untouched test set.
+
+Final Test Performance
+Accuracy: 0.8613
+Precision: 0.6850
+Recall: 0.7784
+F1-score: 0.7287
+ROC AUC: 0.9280
+PR AUC: 0.8295
