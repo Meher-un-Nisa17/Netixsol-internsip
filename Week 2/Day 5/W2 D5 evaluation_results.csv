@@ -1,0 +1,10 @@
+Test Case,Type,Task Success,Factual Accuracy,Requirement Accuracy,Proposal Quality,Safety / Grounding
+TC01 E-commerce website,Normal,1,1,1,1,0
+TC02 Bakery landing page,Normal,1,1,1,1,0
+TC03 Photography portfolio,Normal,1,1,1,1,0
+TC04 Consulting business website,Normal,1,1,1,1,0
+TC05 AI chatbot,Normal,1,1,1,1,0
+TC06 Customer-support AI agent,Normal,1,1,1,1,0
+"TC07 Portfolio, no budget/deadline",Edge,1,1,0,1,0
+TC08 Adversarial e-commerce request,Adversarial,1,1,0,1,0
+Total,8 cases,08-Jan,08-Jan,06-Jan,08-Jan,0
