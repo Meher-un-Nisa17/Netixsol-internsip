@@ -1,0 +1,22 @@
+feature_name,description,computation_window,source_columns,leakage_control,feature_level
+home_recent_5_win_rate,Home team's win rate over its previous 5 matches,Previous 5 matches,"result, team",Current match excluded using shift(1),Match
+away_recent_5_win_rate,Away team's win rate over its previous 5 matches,Previous 5 matches,"result, team",Current match excluded using shift(1),Match
+home_win_streak,Number of consecutive wins immediately before the match,Historical matches before current match,"result, team",Current match result is not included,Match
+away_win_streak,Number of consecutive wins immediately before the match,Historical matches before current match,"result, team",Current match result is not included,Match
+home_recent_5_avg_score,Home team's average score over its previous 5 matches,Previous 5 matches,"team_score, team",Current match score excluded using shift(1),Match
+away_recent_5_avg_score,Away team's average score over its previous 5 matches,Previous 5 matches,"team_score, team",Current match score excluded using shift(1),Match
+home_days_rest,Number of days since the home team's previous match,Previous match,"match_date, team",Uses only previous match date,Match
+away_days_rest,Number of days since the away team's previous match,Previous match,"match_date, team",Uses only previous match date,Match
+h2h_matches,Number of previous meetings between the two teams,All previous meetings,"match_date, home_team, away_team, match_winner",Current match excluded using shift(1),Match
+h2h_current_home_wins,Previous head-to-head wins by the team currently playing at home,All previous meetings,"match_winner, home_team, away_team",Current match excluded,Match
+h2h_current_away_wins,Previous head-to-head wins by the team currently playing away,All previous meetings,"match_winner, home_team, away_team",Current match excluded,Match
+h2h_draws,Number of previous drawn meetings,All previous meetings,match_winner,Current match excluded,Match
+h2h_current_home_win_rate,Current home team's historical win rate against the current away team,All previous meetings,"h2h wins, h2h matches",Current match excluded,Match
+home_pre_match_ladder_rank,Reconstructed home-team ladder rank before the match,Current season up to previous matches,"result, team_score, opponent_score, year",Current match excluded from cumulative statistics,Match
+away_pre_match_ladder_rank,Reconstructed away-team ladder rank before the match,Current season up to previous matches,"result, team_score, opponent_score, year",Current match excluded from cumulative statistics,Match
+home_pre_match_points,Home team's reconstructed competition points before the match,Current season up to previous matches,"result, year",Current match excluded,Match
+away_pre_match_points,Away team's reconstructed competition points before the match,Current season up to previous matches,"result, year",Current match excluded,Match
+home_pre_match_percentage,Home team's reconstructed percentage before the match,Current season up to previous matches,"team_score, opponent_score, year",Current match excluded,Match
+away_pre_match_percentage,Away team's reconstructed percentage before the match,Current season up to previous matches,"team_score, opponent_score, year",Current match excluded,Match
+venue,Venue where the match is played,Current match metadata,venue,Known before match start,Match
+player_recent_5_avg_disposals,Player's average disposals over previous 5 matches,Previous 5 player matches,"disposals, player_id",Current match disposals excluded using shift(1),Player-Match

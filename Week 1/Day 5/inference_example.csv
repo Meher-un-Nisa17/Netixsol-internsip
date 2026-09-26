@@ -1,0 +1,11 @@
+age,workclass,fnlwgt,education,education-num,marital-status,occupation,relationship,race,sex,capital-gain,capital-loss,hours-per-week,native-country,predicted_probability,prediction
+25,Private,180000,Bachelors,13,Never-married,Tech-support,Not-in-family,White,Female,0,0,40,United-States,0.02052630706638922,0
+45,Private,200000,Masters,14,Married-civ-spouse,Exec-managerial,Husband,White,Male,0,0,50,United-States,0.8481100382977279,1
+32,Private,150000,HS-grad,9,Never-married,Sales,Own-child,White,Female,0,0,35,United-States,0.005595944941576241,0
+52,Self-emp-inc,220000,Bachelors,13,Married-civ-spouse,Prof-specialty,Husband,White,Male,15000,0,55,United-States,0.9980225440606133,1
+29,Private,170000,Some-college,10,Never-married,Adm-clerical,Not-in-family,White,Female,0,0,40,United-States,0.011801599328868225,0
+40,Local-gov,190000,Masters,14,Married-civ-spouse,Prof-specialty,Husband,White,Male,0,0,45,United-States,0.6681856223859279,1
+23,Private,160000,HS-grad,9,Never-married,Other-service,Own-child,White,Female,0,0,30,United-States,0.001075580950011397,0
+50,Private,210000,Bachelors,13,Married-civ-spouse,Exec-managerial,Husband,White,Male,5000,0,60,United-States,0.24046627266490497,0
+35,Private,175000,Some-college,10,Divorced,Craft-repair,Not-in-family,White,Male,0,0,40,United-States,0.036041638400298316,0
+60,Self-emp-not-inc,230000,Masters,14,Married-civ-spouse,Exec-managerial,Husband,White,Male,10000,0,50,United-States,0.9840507587665388,1

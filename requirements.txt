@@ -1,0 +1,14 @@
+chromadb
+deepgram-sdk
+edge-tts
+fastapi
+google-api-python-client
+google-auth-oauthlib
+json-repair
+openai
+pandas
+python-dotenv
+python-multipart
+requests
+streamlit
+uvicorn[standard]

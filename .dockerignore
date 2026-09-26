@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+.venv312
+__pycache__
+**/__pycache__
+*.py[cod]
+*.db
+*.log
+.env
+.env.*
+credentials.json
+token.json
+data/raw
+data/chroma_db
+data/audio_output

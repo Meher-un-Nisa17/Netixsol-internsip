@@ -1,0 +1,16 @@
+# Replace with the owned DNS name and configure BASIC_AUTH_USER and
+# BASIC_AUTH_PASSWORD_HASH in the Caddy service environment.
+agent.example.com {
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_PASSWORD_HASH}
+	}
+
+	@audio path /static/*
+	handle @audio {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8501
+	}
+}

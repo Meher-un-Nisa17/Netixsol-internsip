@@ -1,0 +1,7 @@
+{
+    "timestamp": "2026-09-22 13:48:44",
+    "total_queries": 20,
+    "retrieval_accuracy_percent": 100.0,
+    "grounding_rate_percent": 90.0,
+    "hallucination_rate_percent": 0.0
+}
