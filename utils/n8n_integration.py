@@ -2,11 +2,12 @@ import os
 import json
 import requests
 from utils.settings import BUSINESS_EMAIL
-
+ 
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "").strip()
 N8N_WEBHOOK_AUTH_TOKEN = os.getenv("N8N_WEBHOOK_AUTH_TOKEN", "").strip()
-
-
+N8N_WEBHOOK_TIMEOUT_SECONDS = int(os.getenv("N8N_WEBHOOK_TIMEOUT_SECONDS", "60"))
+ 
+ 
 def _normalise_n8n_result(result):
     """Handle n8n's direct JSON response and common wrapped response shapes."""
     for _ in range(3):
@@ -24,7 +25,7 @@ def _normalise_n8n_result(result):
             result = nested
             continue
         break
-
+ 
     if not isinstance(result, dict):
         return None
     # Normalize common Google Calendar/n8n ID spellings for the CRM.
@@ -38,7 +39,7 @@ def _normalise_n8n_result(result):
     elif status:
         result["status"] = status
     return result
-
+ 
 def trigger_n8n_booking_workflow(intent: str, client_name: str, phone: str, city: str = None,
                                   target_area: str = None, meeting_time: str = None, email: str = None,
                                   event_id: str = None, property_title: str = None, assigned_employee_email: str = None,
@@ -61,13 +62,13 @@ def trigger_n8n_booking_workflow(intent: str, client_name: str, phone: str, city
         "meeting_time": meeting_time,
         "event_id": event_id,
     }
-    
+ 
     try:
         response = requests.post(
             N8N_WEBHOOK_URL,
             json=payload,
             headers={"X-Uzma-Webhook-Token": N8N_WEBHOOK_AUTH_TOKEN},
-            timeout=30,
+            timeout=N8N_WEBHOOK_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         if not response.content or not response.text.strip():
@@ -95,6 +96,11 @@ def trigger_n8n_booking_workflow(intent: str, client_name: str, phone: str, city
         if intent in {"reschedule", "cancel"} and event_id and str(result["event_id"]) != str(event_id):
             return {"status": "error", "message": "n8n returned a different Calendar event than the requested appointment."}
         return result
+    except requests.exceptions.Timeout:
+        print(f"n8n webhook timed out after {N8N_WEBHOOK_TIMEOUT_SECONDS}s (intent={intent}); "
+              f"the workflow may still complete server-side even though this call gave up waiting.")
+        return {"status": "error", "message": "n8n request timed out."}
     except Exception as e:
         print(f"Error calling n8n pipeline: {e}")
         return {"status": "error", "message": str(e)}
+ 

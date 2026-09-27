@@ -419,9 +419,9 @@ class RealEstateRAGPipeline:
             explicit_preference_fields.add("meeting_time")
 
         name_patterns = [
-            r"(?:mera\s+naam|my\s+name\s+is)\s+([A-Za-z\s]+?)(?=\s+hai|\s+ho|\s+hoon|\s+phone|\s+03|\s*,|\s*\.|$)",
+            r"(?:mera\s+na+m|my\s+name\s+is)\s+([A-Za-z\s]+?)(?=\s+hai|\s+ho|\s+hoon|\s+phone|\s+03|\s*,|\s*\.|$)",
             r"(?:main|i\s+am)\s+([A-Za-z\s]+?)(?=\s+baat|\s+bol|\s+hai|\s+hoon|\s*,|\s*\.|$)",
-            r"\bnaam\s+([A-Za-z\s]+?)(?=\s+hai|\s+ho|\s+phone|\s*,|\s*\.|$)"
+            r"\bna+m\s+([A-Za-z\s]+?)(?=\s+hai|\s+ho|\s+phone|\s*,|\s*\.|$)"
         ]
         for pattern in name_patterns:
             match = re.search(pattern, transcript, re.IGNORECASE)
@@ -444,17 +444,36 @@ class RealEstateRAGPipeline:
             self.state["wants_to_reschedule"] = False
         elif any(k in lower_transcript for k in ["reschedule", "change time", "doosra time", "badal", "tabdeel", "ری شیڈول"]):
             action_intent = "reschedule"
+            if not self.state.get("wants_to_reschedule"):
+                # Freshly entering reschedule mode: drop any old meeting_time so the
+                # flow can't mistake the original booking time for the new one.
+                if not extracted_meeting_time:
+                    self.state["meeting_time"] = None
             self.state["wants_to_reschedule"] = True
             self.state["wants_to_visit"] = False
             self.state["wants_to_cancel"] = False
         elif any(k in lower_transcript for k in ["visit", "schedule", "book", "confirm", "dekhna", "daikhna", "fix kar", "spot visit", "وزٹ"]):
             if not self.state.get("wants_to_reschedule") and not self.state.get("wants_to_cancel"):
-                action_intent = "book"
-                self.state["wants_to_visit"] = True
+                if self.state.get("appointment_status") in {"BOOKED", "RESCHEDULED"}:
+                    # Caller already has an appointment; any further scheduling talk
+                    # means they want to change it, not book a second one.
+                    action_intent = "reschedule"
+                    if not extracted_meeting_time:
+                        self.state["meeting_time"] = None
+                    self.state["wants_to_reschedule"] = True
+                    self.state["wants_to_visit"] = False
+                else:
+                    action_intent = "book"
+                    self.state["wants_to_visit"] = True
 
         if self.state.get("booking_error") and extracted_meeting_time and not action_intent:
-            action_intent = "book"
-            self.state["wants_to_visit"] = True
+            if self.state.get("appointment_status") in {"BOOKED", "RESCHEDULED"}:
+                action_intent = "reschedule"
+                self.state["wants_to_reschedule"] = True
+                self.state["wants_to_visit"] = False
+            else:
+                action_intent = "book"
+                self.state["wants_to_visit"] = True
         if action_intent == "book" and self.state.get("booking_error") and not extracted_meeting_time:
             self.state["meeting_time"] = None
             explicit_preference_fields.add("meeting_time")
@@ -464,20 +483,57 @@ class RealEstateRAGPipeline:
             self.state["wants_to_visit"] = False
             self.state["wants_to_cancel"] = False
 
-        if action_intent == "reschedule" and not extracted_meeting_time:
-            self.state["meeting_time"] = None
-            explicit_preference_fields.add("meeting_time")
-            self.state["booking_error"] = "A new appointment date and time are required."
-            reply = "براہِ کرم اپنی Visit کے لیے نئی تاریخ اور وقت بتائیں۔"
-            self.conversation_history.append({"role": "assistant", "content": reply})
-            return reply
+        # --- 4. RESCHEDULE: confirm identity, verify an existing appointment, then ask for the new time ---
+        if self.state.get("wants_to_reschedule") and not self.state.get("wants_to_cancel"):
+            if not self.state.get("phone") or not self.state.get("client_name"):
+                missing = []
+                if not self.state.get("phone"):
+                    missing.append("رجسٹرڈ فون نمبر")
+                if not self.state.get("client_name"):
+                    missing.append("نام")
+                reply = f"آپ کی اپائنٹمنٹ ری شیڈول کرنے کے لیے براہ کرم اپنا {' اور '.join(missing)} بتا دیں۔"
+                self.conversation_history.append({"role": "assistant", "content": reply})
+                return reply
 
-        # --- 4. OVERRIDE FOR CANCELLATION & RESCHEDULE (IF PHONE IS MISSING) ---
-        if (self.state.get("wants_to_cancel") or self.state.get("wants_to_reschedule")) and not self.state.get("phone"):
-            action_name = "کینسل" if self.state.get("wants_to_cancel") else "ری شیڈول"
-            spoken_reply = f"اپنی اپائنٹمنٹ {action_name} کرنے کے لیے براہ کرم اپنا رجسٹرڈ فون نمبر بتا دیں۔"
-            logging.info("Generated cancellation/reschedule information request.")
-            return spoken_reply
+            saved_visit = None
+            if self.visit_db and hasattr(self.visit_db, "find_visit_by_phone"):
+                try:
+                    saved_visit = self.visit_db.find_visit_by_phone(self.state["phone"])
+                except Exception as err:
+                    logging.error(f"Database lookup error: {err}")
+
+            if not saved_visit or not saved_visit.get("event_id"):
+                self.state["wants_to_reschedule"] = False
+                reply = "معذرت، اس نمبر پر کوئی شیڈولڈ Appointment نہیں ملی۔ براہِ کرم درست Phone Number بتائیں یا نئی Visit Book کریں۔"
+                self.conversation_history.append({"role": "assistant", "content": reply})
+                return reply
+
+            if not extracted_meeting_time and not self.state.get("meeting_time"):
+                property_ref = saved_visit.get("property_title") or saved_visit.get("target_area") or "آپ کی Property"
+                old_time = saved_visit.get("meeting_time", "")
+                reply = f"جی، ہمیں {property_ref} کے لیے آپ کی {old_time} کی Appointment مل گئی ہے۔ براہِ کرم نئی تاریخ اور وقت بتائیں۔"
+                self.conversation_history.append({"role": "assistant", "content": reply})
+                return reply
+
+        # --- 4b. CANCELLATION: confirm the phone number, then verify a matching appointment exists ---
+        if self.state.get("wants_to_cancel"):
+            if not self.state.get("phone"):
+                spoken_reply = "اپنی اپائنٹمنٹ کینسل کرنے کے لیے براہ کرم اپنا رجسٹرڈ فون نمبر بتا دیں۔"
+                logging.info("Generated cancellation information request.")
+                return spoken_reply
+
+            saved_visit = None
+            if self.visit_db and hasattr(self.visit_db, "find_visit_by_phone"):
+                try:
+                    saved_visit = self.visit_db.find_visit_by_phone(self.state["phone"])
+                except Exception as err:
+                    logging.error(f"Database lookup error: {err}")
+
+            if not saved_visit or not saved_visit.get("event_id"):
+                self.state["wants_to_cancel"] = False
+                reply = "معذرت، اس نمبر پر کوئی شیڈولڈ Appointment نہیں ملی۔ براہِ کرم درست Phone Number بتائیں۔"
+                self.conversation_history.append({"role": "assistant", "content": reply})
+                return reply
 
         # --- 5. EXECUTE ACTIONS FOR CANCELLATION / RESCHEDULE ---
         if (self.state.get("wants_to_cancel") or self.state.get("wants_to_reschedule")) and self.state.get("phone"):
@@ -656,8 +712,18 @@ class RealEstateRAGPipeline:
                         "کیا آپ Area یا Budget میں کچھ flexibility رکھ سکتے ہیں؟"
                     )
 
-            # Execute a booking only after the caller has provided the required details.
-            if self.state.get("wants_to_visit") and self.state.get("phone") and self.state.get("meeting_time"):
+            # Execute booking, reschedule, or cancellation once the caller has provided the required details.
+            phone_ready = bool(self.state.get("phone"))
+            wants_to_visit = self.state.get("wants_to_visit")
+            wants_to_reschedule = self.state.get("wants_to_reschedule")
+            wants_to_cancel = self.state.get("wants_to_cancel")
+            meeting_time_ready = bool(self.state.get("meeting_time"))
+            should_process_calendar = phone_ready and (
+                wants_to_cancel
+                or (wants_to_reschedule and meeting_time_ready)
+                or (wants_to_visit and meeting_time_ready)
+            )
+            if should_process_calendar:
                 outcome = self._process_calendar_actions()
                 if outcome:
                     self.conversation_history.append({"role": "assistant", "content": outcome})
